@@ -1,0 +1,28 @@
+# Base image
+FROM ubuntu:latest
+
+# Install required packages
+RUN apt-get update && apt-get install -y wget curl
+
+# Install Prometheus
+RUN wget https://github.com/prometheus/prometheus/releases/download/v2.30.0/prometheus-2.30.0.linux-amd64.tar.gz && \
+    tar -xzf prometheus-2.30.0.linux-amd64.tar.gz && \
+    mv prometheus-2.30.0.linux-amd64 /opt/prometheus
+
+# Install NGINX
+RUN apt-get install -y nginx
+
+# Install Tomcat
+RUN apt-get install -y tomcat9
+
+# Copy Prometheus configuration file
+COPY prometheus.yml /opt/prometheus/prometheus.yml
+
+# Copy NGINX configuration file
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose ports
+EXPOSE 80 9090 8080
+
+# Start NGINX and Tomcat services
+CMD service nginx start && service tomcat9 start && /opt/prometheus/prometheus --config.file=/opt/prometheus/prometheus.yml
