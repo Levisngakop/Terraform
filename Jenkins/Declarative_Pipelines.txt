@@ -1,0 +1,89 @@
+pipeline {
+    agent any
+stages {
+    stage ('CodeCheckout') {
+        steps {
+            script {
+                try {
+                    echo 'Downloading the code from github'
+                    git 'https://github.com/mankinimbom/maven.git'
+                } catch (Exception e1) {
+                    mail bcc: '', body: 'git failed to download resources from the given repository', cc: 'levisngakop47@gmail.com', from: '', replyTo: '', subject: 'Git Clone fail', to: 'levisngakop47@gmail.com'
+                    error 'git failed'
+                }
+            }
+        }
+    } 
+    stage ('CodeBuild') {
+        steps {
+            script {
+                try {
+                    echo 'Building the code into an artifact'
+                    sh 'mvn package'
+                } catch (Exception e2) {
+                    mail bcc: '', body: 'git failed to build the code', cc: 'levisngakop47@gmail.com', from: '', replyTo: '', subject: 'Git build fail', to: 'levisngakop47@gmail.com'
+                    error 'git build failed'
+                }
+            }
+        }
+    }
+    stage ('SonarQube Analysis') {
+        steps {
+            script {
+                try {
+                    echo 'Scanning the code with Sonar'
+                     withSonarQubeEnv(credentialsId: 'sonar') {
+                    sh 'mvn sonar:sonar'
+                } catch (Exception e3) {
+                    mail bcc: '', body: 'sonar failed to scan the code', cc: 'levisngakop47@gmail.com', from: '', replyTo: '', subject: 'Sonar failed', to: 'levisngakop47@gmail.com'
+                    error 'Sonar failed'
+                }
+            }
+        }
+    }
+    stage ('CodeTest') {
+        steps {
+            script {
+                try {
+                    echo 'Testing the application'
+                    git 'https://github.com/mankinimbom/testingproject.git'
+                    sh 'java -jar /var/jenkins_home/workspace/handling/testing.jar'
+                } catch (Exception e4) {
+                    mail bcc: '', body: 'selenium failed to test', cc: 'levisngakop47@gmail.com', from: '', replyTo: '', subject: 'Git build fail', to: 'levisngakop47@gmail.com'
+                    error 'selenium testing  failed'
+                }
+            }
+        }
+    }
+    stage ('ArtifactoryNexus') {
+        steps {
+            script {
+                try {
+                    echo 'Deploying to Nexus'
+                    nexusArtifactUploader artifacts: [[artifactId: 'webapp', classifier: '', file: '/var/jenkins_home/workspace/handling/webapp/target/webapp.war', type: 'war']], credentialsId: 'Nexus', groupId: 'webapp', nexusUrl: 'nexus.atparadigmlabs.com', nexusVersion: 'nexus3', protocol: 'http', repository: 'java_project', version: '1.0-java_project'
+                    mail bcc: '', body: 'nexus failed to deploy', cc: 'levisngakop47@gmail.com', from: '', replyTo: '', subject: 'nexus failed to deploy', to: 'levisngakop47@gmail.com'
+                    error 'failed to deploy to nexus'
+                
+                } catch (Exception e6) {
+                    mail bcc: '', body: 'Failed to deploy', cc: 'levisngakop47@gmail.com', from: '', replyTo: '', subject: 'fail to deploy', to: 'levisngakop47@gmail.com' 
+                    error 'selenium testing  failed'
+                }
+            }
+        }
+    }
+    stage ('DeploytoTomcat') {
+        steps {
+            script {
+                try {
+                    echo 'Deploying to tomcat'
+                    deploy adapters: [tomcat9(credentialsId: 'tomcatweb', path: '', url: 'https://tomcat.atparadigmlabs.com')], contextPath: 'levis2', war: '**/*.war'
+                } catch (Exception e5) {
+                    mail bcc: '', body: 'Failed to deploy to tomcat', cc: 'levisngakop47@gmail.com', from: '', replyTo: '', subject: 'fail to deploy to tomcat', to: 'levisngakop47@gmail.com'  
+                    error 'Failed to deploy to tomcat'
+                }
+            }
+        }
+    }
+ }
+}
+
